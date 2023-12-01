@@ -1,17 +1,15 @@
 import os
 
-import requests  # type: ignore
+import requests
 
-YEAR = 2023
-
-input_url_template = "https://adventofcode.com/{}/day/{}/input"
+input_url_template = "https://adventofcode.com/2022/day/{}/input"
 inputs_path = os.path.dirname(__file__) + '/inputs'
 for i in range(1, 26):
     input_fn = f"{inputs_path}/day{i}.txt"
     if os.path.exists(input_fn):
         continue
 
-    input_url = input_url_template.format(YEAR, i)
+    input_url = input_url_template.format(i)
 
     with open('cookie.txt') as f:
         cookie = f.read().strip()

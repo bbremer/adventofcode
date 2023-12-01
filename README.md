@@ -1,3 +1,5 @@
-[Advent of Code 2022](https://adventofcode.com/2022)
+[Advent of Code](https://adventofcode.com/)
 
-Requires requests to run update.py.
+Requires python and requests to run update.py.
+
+[Instructions](https://github.com/wimglenn/advent-of-code-wim/issues/1) for how to get the cookie.
