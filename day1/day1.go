@@ -101,7 +101,7 @@ func line_to_number_part2(line string) int {
 }
 
 func main() {
-	file, _ := os.Open("inputs/day1.txt")
+	file, _ := os.Open("../inputs/day1.txt")
 	defer file.Close()
 
 	part1_total := 0
