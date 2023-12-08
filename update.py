@@ -1,11 +1,14 @@
 import os
+import pathlib
 
 import requests  # type: ignore
 
 YEAR = 2023
 
 input_url_template = "https://adventofcode.com/{}/day/{}/input"
-inputs_path = os.path.dirname(__file__) + '/inputs'
+inputs_path = pathlib.Path(__file__).parent / 'inputs'
+if not inputs_path.is_dir():
+    inputs_path.mkdir()
 for i in range(1, 26):
     input_fn = f"{inputs_path}/day{i}.txt"
     if os.path.exists(input_fn):
