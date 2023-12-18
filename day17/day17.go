@@ -24,35 +24,45 @@ func main() {
 		lines = append(lines, line)
 	}
 
-	p := Pos{0, 0, 0, direction{0, 0}, 0}
-	part1Total := run(lines, p, move)
+	part1Total := run(lines, 1, 3)
 	fmt.Println("part 1:", part1Total)
+
+	part2Total := run(lines, 4, 10)
+	fmt.Println("part 2:", part2Total)
 }
 
-func run(lines [][]int, startP Pos, moveF func(Pos, direction, [][]int) (Pos, bool)) int {
-	scores := map[Pos]int{}
-	pq := make(PriorityQueue, 0)
+func run(lines [][]int, minC, maxC int) int {
+	moveF := makeMoveF(lines, minC, maxC)
+
+	startP := Pos{0, 0, 0, direction{0, 0}}
+
+	scores := make(map[Pos]int, len(lines)*len(lines[0])*maxC*4)
+	for i, l := range lines {
+		for j := range l {
+			for _, d := range []direction{{1, 0}, {0, 1}, {-1, 0}, {0, -1}} {
+				for l := 0; l < maxC; l++ {
+					scores[Pos{i, j, l, d}] = 1000000000
+				}
+			}
+		}
+	}
+	scores[startP] = 0
+
+	pq := NewPriorityQueue()
 	pq.pushPos(startP, 0)
 	for pq.Len() > 0 {
 		p, score := pq.popPos()
-
-		if !p.valid(lines) {
-			continue
-		}
 
 		if p.r == len(lines)-1 && p.c == len(lines[0])-1 {
 			return score
 		}
 
-		if _, ok := scores[p]; ok {
-			continue
-		}
-		scores[p] = score
-
 		for _, d := range []direction{{1, 0}, {0, 1}, {-1, 0}, {0, -1}} {
-			if newP, ok := moveF(p, d, lines); ok {
-				newScore := score + lines[newP.r][newP.c]
-				pq.pushPos(newP, newScore)
+			if newP, newScore, ok := moveF(p, score, d); ok {
+				if newScore < scores[newP] {
+					scores[newP] = newScore
+					pq.pushPos(newP, newScore)
+				}
 			}
 		}
 	}
@@ -72,7 +82,7 @@ func (d1 direction) Eq(d2 direction) bool {
 }
 
 func (d1 direction) backwards(d2 direction) bool {
-	return abs(d1.r-d2.r) == 2 || abs(d1.c-d2.c) == 2
+	return abs(d1.r-d2.r) >= 2 || abs(d1.c-d2.c) >= 2
 }
 
 func abs(x int) int {
@@ -87,36 +97,38 @@ type Pos struct {
 	c           int
 	consecutive int
 	d           direction
-	distance    int
 }
 
 func (p Pos) valid(lines [][]int) bool {
 	return 0 <= p.r && p.r < len(lines) && 0 <= p.c && p.c < len(lines[0])
 }
 
-func move(p Pos, d direction, lines [][]int) (Pos, bool) {
-	consecutive := 0
-	if d.Eq(p.d) {
-		consecutive = p.consecutive + 1
-	}
-	newP := Pos{p.r + d.r, p.c + d.c, consecutive, d, 1}
-	isValid := newP.valid(lines) && consecutive < 3 && !d.backwards(p.d)
-	return newP, isValid
-}
+func makeMoveF(lines [][]int, minC, maxC int) func(p Pos, s int, d direction) (Pos, int, bool) {
+	return func(p Pos, s int, d direction) (Pos, int, bool) {
+		var consecutive int
+		var newP Pos
+		if d.Eq(p.d) {
+			consecutive = p.consecutive + 1
+			newP = Pos{p.r + d.r, p.c + d.c, consecutive, d}
+		} else {
+			consecutive = minC - 1
+			newP = Pos{p.r + minC*d.r, p.c + minC*d.c, consecutive, d}
+		}
 
-/*
-func move2(p, Pos, s int, d direction, lines [][]int) (Pos, bool) {
-	var consecutive int
-	if d.Eq(p.d) {
-		consecutive = p.consecutive + 1
-		newP := Pos{p.r + d.r, p.c + d.c, consecutive, d, 1}
-		return newP, newP.valid(lines) && consecutive < 10 && !d.backwards(p.d)
+		if newP.valid(lines) && consecutive < maxC && !d.backwards(p.d) {
+			r := p.r
+			c := p.c
+			newScore := s
+			for r != newP.r || c != newP.c {
+				r += d.r
+				c += d.c
+				newScore += lines[r][c]
+			}
+			return newP, newScore, true
+		}
+		return newP, 0, false
 	}
-	consecutive = 4
-	newP := Pos{p.r + 4*d.r, p.c + 4*d.c, consecutive, d, 4}
-	return newP, newP.valid(lines) && consecutive < 10 && !d.backwards(p.d)
 }
-*/
 
 type Node struct {
 	p     Pos
