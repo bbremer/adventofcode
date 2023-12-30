@@ -3,7 +3,7 @@ import pathlib
 
 import requests  # type: ignore
 
-YEAR = 2023
+YEAR = 2015
 
 input_url_template = "https://adventofcode.com/{}/day/{}/input"
 inputs_path = pathlib.Path(__file__).parent / 'inputs'
