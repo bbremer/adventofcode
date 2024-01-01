@@ -24,10 +24,17 @@ let sues = (
 )
 
 console.log("Part 1:", sues.filter(m => (m.j.every(x => standard.get(x[0]) === parseInt(x[1]))))[0].i)
-console.log("Part 2:", sues.filter(m => (
-  m.j.every(x => x[0] === "cats" || x[0] === "trees" ? standard.get(x[0]) < parseInt(x[1]) : (
-    x[0] === "pomeranians" || x[0] === "goldfish" ? standard.get(x[0]) > parseInt(x[1]) : (
-      standard.get(x[0]) === parseInt(x[1])
-    )
-  ))
-))[0].i)
+console.log("Part 2:", sues.filter(m => (m.j.every(compare)))[0].i)
+
+function compare([key, x]) {
+  switch (key) {
+    case "cats":
+    case "trees":
+      return standard.get(key) < parseInt(x)
+    case "pomeranians":
+    case "goldfish":
+      return standard.get(key) > parseInt(x)
+    default:
+      return standard.get(key) === parseInt(x)
+  }
+}
