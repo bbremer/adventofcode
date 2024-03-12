@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 
 const textLines = fs
 	.readFileSync("inputs/day19.txt", "ascii")
+	// .readFileSync("inputs/test.txt", "ascii")
 	.trim()
 	.split("\n");
 
@@ -48,72 +49,22 @@ function isLower(s: string): boolean {
 	return s.toLowerCase() === s;
 }
 
-const reverseSymbolMapRaw = [...symbolMap.entries()].flatMap(([k, v]) =>
-	v.map((x) => [x, k]),
-);
-const reverseSymbolMap = reverseSymbolMapRaw.filter(([k, v]) => v !== "e");
-const compoundsToE = new Set(
-	reverseSymbolMapRaw.filter(([k, v]) => v === "e").map(([k, _]) => k),
+const reverseSymbolMap = new Map<string, string>(
+	[...symbolMap.entries()]
+		.filter(([x, y]) => x !== "e")
+		.flatMap(([x, y]) => y.map((z) => [z, x])),
 );
 
-const cache = new Map();
+const tokenPattern = new RegExp([...symbolMap.keys()].join("|"), "g");
 
-function dfs(s: string, count: number): number {
-	if (compoundsToE.has(s)) {
-		return count + 1;
-	}
-	if (cache.has(s)) {
-		return cache.get(s);
-	}
-	let localMin = 1000000000 + 1;
-	for (let i = 0; i < s.length; i++) {
-		for (const [k, v] of reverseSymbolMap) {
-			const j = i + k.length;
-			if (s.slice(i, j) === k) {
-				const newS = s.slice(0, i) + v + s.slice(j);
-				localMin = Math.min(localMin, dfs(newS, count + 1));
-			}
-		}
-	}
-	cache.set(s, localMin);
-	return localMin;
-}
+const s = baseString
+	.replaceAll("Rn", "(")
+	.replaceAll("Y", ",")
+	.replaceAll("Ar", ")")
+	.replaceAll(tokenPattern, "x")
+	.replaceAll("C", "x");
 
-class CachedString {
-	constructor(
-		public s: string,
-		public n: number,
-	) {}
-}
-
-const symbols = [...toSymbols(baseString)].map((x) => x[0]);
-let currOptions: CachedString[] = [new CachedString(symbols[0], 0)];
-const MAXSIZE = 16;
-for (const symbol of symbols.slice(1)) {
-	const nextOptions: Set<CachedString> = new Set();
-	for (const opt of currOptions) {
-		for (const newOpt of combine(opt, symbol)) {
-			nextOptions.add(newOpt);
-		}
-	}
-	currOptions = [...nextOptions];
-	console.log(symbol, currOptions);
-}
-
-function combine(cs: CachedString, symbol: string): CachedString[] {
-	const newString = cs.s + symbol;
-	const ret = [new CachedString(newString, cs.n)];
-	for (const [k, v] of reverseSymbolMap) {
-		if (newString.slice(-k.length) === k) {
-			ret.push(new CachedString(newString.slice(0, -k.length) + v, cs.n + 1));
-		}
-	}
-	return ret.filter((cs) => cs.s.length <= MAXSIZE);
-}
-
-console.log();
-console.log(reverseSymbolMap);
-console.log(currOptions.filter((x) => compoundsToE.has(x)));
-console.log(compoundsToE);
-
-// console.log("Part 2:", dfs(baseString, 0));
+console.log(
+	"Part 2:",
+	s.length - 2 * s.match(/\(/g).length - 2 * s.match(/,/g).length - 1,
+);
