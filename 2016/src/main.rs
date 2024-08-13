@@ -1,5 +1,6 @@
 mod day1;
 mod day2;
+mod day3;
 
 fn run_day(n: u8, f: fn(&str) -> (String, String)) {
     let now = std::time::Instant::now();
@@ -11,4 +12,5 @@ fn run_day(n: u8, f: fn(&str) -> (String, String)) {
 fn main() {
     run_day(1, day1::run);
     run_day(2, day2::run);
+    run_day(3, day3::run);
 }
