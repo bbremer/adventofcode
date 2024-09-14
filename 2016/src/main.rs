@@ -16,5 +16,5 @@ fn main() {
     run_day(2, day2::run);
     run_day(3, day3::run);
     run_day(4, day4::run);
-    run_day(4, day5::run);
+    run_day(5, day5::run);
 }
