@@ -4,3 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+itertools = "0.13.0"
+md-5 = "0.10.6"
+rayon = "1.10.0"
+
+[profile.release]
+debug = true
