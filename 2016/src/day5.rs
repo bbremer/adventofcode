@@ -1,6 +1,22 @@
 use std::io::prelude::*;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::Mutex;
 
 use md5::{Digest, Md5};
+
+const CHUNK_SIZE: usize = 1_000;
+
+struct Shared<'a> {
+    prefix: &'a [u8],
+    done: AtomicBool,
+    counter: AtomicUsize,
+    found: Mutex<Found>,
+}
+
+struct Found {
+    entries: Vec<(usize, u8, u8)>,
+    part2_mask: u8,
+}
 
 pub fn run(filename: &str) -> (String, String) {
     let mut file = std::fs::File::open(filename).unwrap();
@@ -8,48 +24,61 @@ pub fn run(filename: &str) -> (String, String) {
     file.read_to_string(&mut buffer).unwrap();
     let door_id = buffer.trim();
 
-    const CHUNK_SIZE: usize = 50_000;
-    let mut chunker = (0..).step_by(CHUNK_SIZE).map(|i| i..i + CHUNK_SIZE);
-
-    let call = |r| {
-        let v = door_id.to_string().into_bytes();
-        std::thread::spawn(move || hash_range(r, &v))
+    let shared = Shared {
+        prefix: &door_id.to_string().into_bytes(),
+        done: AtomicBool::new(false),
+        counter: AtomicUsize::new(0),
+        found: Mutex::new(Found {
+            entries: vec![],
+            part2_mask: 0,
+        }),
     };
 
     let num_threads = std::thread::available_parallelism().map_or(8, |n| n.get());
-    let mut join_handles: std::collections::VecDeque<std::thread::JoinHandle<_>> = chunker
-        .by_ref()
-        .take(num_threads)
-        .map(|r| call(r))
-        .collect();
-
-    let mut part1_v = Vec::new();
-    let mut part2_v: [Option<u8>; 8] = [None; 8];
-    let valid_sixths_and_sevenths = chunker.flat_map(|r| {
-        join_handles.push_back(call(r));
-        join_handles.pop_front().unwrap().join().unwrap()
+    std::thread::scope(|scope| {
+        for _ in 0..num_threads {
+            scope.spawn(|| worker(&shared));
+        }
     });
 
-    for (sixth, seventh) in valid_sixths_and_sevenths {
-        if part1_v.len() < 8 {
-            part1_v.push(sixth)
-        }
+    let found = shared.found.into_inner().unwrap();
+    let mut result = found.entries;
+    result.sort_unstable();
 
+    let part1_v: Vec<u8> = result.iter().map(|(_, sixth, _)| *sixth).collect();
+    let mut part2_v: [Option<u8>; 8] = [None; 8];
+    for (_, sixth, seventh) in result {
         if sixth < 8 && part2_v[sixth as usize].is_none() {
             part2_v[sixth as usize] = Some(seventh);
-            if part2_v.into_iter().all(|x| x.is_some()) {
-                break;
-            }
         }
     }
 
-    let part1: String = part1_v.iter().map(|b| format!("{:x}", b)).collect();
+    let part1: String = part1_v.iter().map(|b| format!("{:x}", b)).take(8).collect();
     let part2: String = part2_v
         .iter()
         .map(|b| format!("{:x}", b.unwrap()))
         .collect();
 
     (part1, part2)
+}
+
+fn worker(shared: &Shared) {
+    while !shared.done.load(Ordering::Relaxed) {
+        let start = shared.counter.fetch_add(CHUNK_SIZE, Ordering::Relaxed);
+        let r = start..start + CHUNK_SIZE;
+        for (sixth, seventh) in hash_range(r, shared.prefix) {
+            let mut found = shared.found.lock().unwrap();
+
+            found.entries.push((start, sixth, seventh));
+            if sixth < 8 {
+                found.part2_mask |= 1 << sixth;
+            }
+
+            if found.part2_mask == 0xff {
+                shared.done.store(true, Ordering::Relaxed);
+            }
+        }
+    }
 }
 
 fn hash_range(r: std::ops::Range<usize>, value: &[u8]) -> Vec<(u8, u8)> {
