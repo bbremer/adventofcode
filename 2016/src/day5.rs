@@ -65,8 +65,36 @@ pub fn run(filename: &str) -> (String, String) {
 fn worker(shared: &Shared) {
     while !shared.done.load(Ordering::Relaxed) {
         let start = shared.counter.fetch_add(CHUNK_SIZE, Ordering::Relaxed);
-        let r = start..start + CHUNK_SIZE;
-        for (sixth, seventh) in hash_range(r, shared.prefix) {
+        hash_range(start, shared.prefix, shared);
+    }
+}
+
+fn hash_range(start: usize, value: &[u8], shared: &Shared) {
+    let value_size = value.len();
+    let num_zeros = start.to_string().as_bytes().len() - 1;
+    let mut input: Vec<u8> = [value, start.to_string().as_bytes()].concat();
+
+    let b = input.len();
+    input[b - 1] -= 1;
+
+    for _ in start..start + CHUNK_SIZE {
+        // Manually format string for performance. Update the digits in reverse.
+        for j in (1..=num_zeros).rev() {
+            let index = value_size + j;
+            let new_input = input[index] + 1;
+            if new_input == b'0' + 10 {
+                input[index] = b'0';
+            } else {
+                input[index] = new_input;
+                break;
+            }
+        }
+        let result = Md5::digest(&input);
+
+        if result[0..2] == [0; 2] && result[2] < 16 {
+            let sixth = result[2];
+            let seventh = result[3] >> 4;
+
             let mut found = shared.found.lock().unwrap();
 
             found.entries.push((start, sixth, seventh));
@@ -79,32 +107,4 @@ fn worker(shared: &Shared) {
             }
         }
     }
-}
-
-fn hash_range(r: std::ops::Range<usize>, value: &[u8]) -> Vec<(u8, u8)> {
-    let value_size = value.len();
-    let num_zeros = r.start.to_string().as_bytes().len() - 1;
-    let mut input: Vec<u8> = [value, r.start.to_string().as_bytes()].concat();
-
-    r.filter_map(|i| {
-        // Manually format string for performance. Update the digits in reverse.
-        for j in (1..num_zeros).rev() {
-            let a = 10_usize.pow((num_zeros - j) as u32);
-            let index = value_size + j;
-            let new_val = b'0' + (i / a % 10) as u8;
-            if input[index] == new_val {
-                break;
-            }
-            input[index] = new_val;
-        }
-        input[value_size + num_zeros] = b'0' + (i % 10) as u8;
-        let result = Md5::digest(&input);
-
-        if result[0..2] == [0; 2] && result[2] < 16 {
-            Some((result[2], result[3] >> 4))
-        } else {
-            None
-        }
-    })
-    .collect()
 }
