@@ -2,3 +2,5 @@ cookie.txt
 inputs/
 __pycache__
 node_modules/
+flamegraph.svg
+perf.data*
