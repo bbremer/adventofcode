@@ -18,6 +18,40 @@ struct Found {
     part2_mask: u8,
 }
 
+trait LendingIterator {
+    type Item<'a>
+    where
+        Self: 'a;
+
+    fn next(&mut self) -> Option<Self::Item<'_>>;
+}
+
+struct BytesIter {
+    counter: u32,
+    end: u32,
+    buffer: [u8; 64],
+    len: u8,
+}
+
+impl BytesIter {
+    fn new(_prefix: &str, start: u32, end: u32) -> BytesIter {
+        BytesIter {
+            counter: start,
+            end,
+            buffer: [0; 64],
+            len: 8,
+        }
+    }
+}
+
+impl LendingIterator for BytesIter {
+    type Item<'b> = &'b [u8] where Self: 'b;
+
+    fn next(&mut self) -> Option<Self::Item<'_>> {
+        return Some(&self.buffer[..]);
+    }
+}
+
 pub fn run(filename: &str) -> (String, String) {
     let mut file = std::fs::File::open(filename).unwrap();
     let mut buffer = String::new();
